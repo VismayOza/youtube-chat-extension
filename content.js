@@ -165,6 +165,3 @@ function removeSpecificElements() {
 observeChatContainerChanges();
 addCheckboxToMessages(); // Initial call to add checkboxes to already loaded messages
 removeSpecificElements(); // Remove specific elements on initial load
-
-
-// checking
