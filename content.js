@@ -2,11 +2,10 @@ function isPinnedMessage(message) {
   if (message && message.hasAttribute("in-banner")) {
     return true;
   }
-
   return false;
 }
 
-// Function to add checkbox before each chat message
+// Function to add a checkbox before each chat message
 function addCheckboxToMessages() {
   // Select all chat messages
   const messages = document.querySelectorAll(
@@ -51,7 +50,6 @@ function handleCheckboxChange(currentCheckbox) {
   );
   const currentIndex = messages.indexOf(currentMessage);
 
-  // Update styles based on checkbox state
   if (currentCheckbox.checked) {
     // Hide report and feedback options
     hideReportFeedbackOptions();
@@ -63,21 +61,49 @@ function handleCheckboxChange(currentCheckbox) {
         if (prevCheckbox && !prevCheckbox.checked) {
           prevCheckbox.checked = true;
           msg.style.textDecoration = "line-through"; // Cross out the message
+          msg.style.color = "#444"; // Make the text darker
+          msg.style.opacity = "0.7"; // Make the message slightly transparent
+          msg.style.backgroundColor = "#747070"; // Set a light background color to make it stand out
           const userName = msg.querySelector("#author-name");
           if (userName) {
             userName.style.textDecoration = "line-through"; // Cross out the username
           }
+          hideReportFeedbackOptions(msg); // Hide options for previous messages
         }
       }
     });
     currentMessage.style.textDecoration = "line-through"; // Cross out the current message
+    currentMessage.style.color = "#444"; // Make the text darker
+    currentMessage.style.opacity = "0.7"; // Make the message slightly transparent
+    currentMessage.style.backgroundColor = "#747070"; // Set a light background color to make it stand out
     const userName = currentMessage.querySelector("#author-name");
     if (userName) {
       userName.style.textDecoration = "line-through"; // Cross out the current username
     }
   } else {
-    // Only uncheck the current message and remove cross-out
+    hideReportFeedbackOptions();
+
+    // Uncheck all messages below the current message and remove cross-out
+    messages.forEach((msg, i) => {
+      if (i > currentIndex && !isPinnedMessage(msg)) {
+        const nextCheckbox = msg.querySelector(".message-checkbox");
+        if (nextCheckbox && nextCheckbox.checked) {
+          nextCheckbox.checked = false;
+          msg.style.textDecoration = "none"; // Remove cross-out from the message
+          msg.style.color = ""; // Restore the text color
+          msg.style.opacity = ""; // Restore the opacity
+          msg.style.backgroundColor = ""; // Restore the background color
+          const userName = msg.querySelector("#author-name");
+          if (userName) {
+            userName.style.textDecoration = "none"; // Remove cross-out from the username
+          }
+        }
+      }
+    });
     currentMessage.style.textDecoration = "none"; // Remove cross-out from the current message
+    currentMessage.style.color = ""; // Restore the text color
+    currentMessage.style.opacity = ""; // Restore the opacity
+    currentMessage.style.backgroundColor = ""; // Restore the background color
     const userName = currentMessage.querySelector("#author-name");
     if (userName) {
       userName.style.textDecoration = "none"; // Remove cross-out from the current username
@@ -85,27 +111,32 @@ function handleCheckboxChange(currentCheckbox) {
   }
 }
 
-// Function to hide report and feedback options
+// Function to hide report and feedback options for a specific message
 function hideReportFeedbackOptions() {
-  // Select and hide the "Report" and "Feedback" options
-  const reportFeedbackButtons = document.querySelectorAll(
-    "yt-live-chat-message-action-menu-renderer"
-  );
-  reportFeedbackButtons.forEach((button) => {
-    button.style.display = "none";
-  });
+  hideElementByTag("tp-yt-iron-dropdown");
+}
+
+function hideElementByTag(tagName) {
+  const elements = document.getElementsByTagName(tagName); // Get all elements by the tag name
+
+  // Loop through each element and hide it
+  for (let i = 0; i < elements.length; i++) {
+    elements[i].style.display = "none";
+  }
 }
 
 // Function to set up MutationObserver
 function setupMutationObserver() {
-  const chatContainer = document.querySelector("yt-live-chat-frame");
+  const chatContainer = document.querySelector(
+    "yt-live-chat-item-list-renderer"
+  );
+  if (!chatContainer) return; // Ensure the chat container exists
+
   const observer = new MutationObserver(() => {
     addCheckboxToMessages();
   });
 
-  if (chatContainer) {
-    observer.observe(chatContainer, { childList: true, subtree: true });
-  }
+  observer.observe(chatContainer, { childList: true, subtree: true });
 }
 
 // Initial setup
