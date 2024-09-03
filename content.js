@@ -5,39 +5,32 @@ function isPinnedMessage(message) {
 
 // Function to add a checkbox before each chat message
 function addCheckboxToMessages() {
-  // Select all chat messages
   const messages = document.querySelectorAll(
     "yt-live-chat-text-message-renderer"
   );
 
   messages.forEach((message) => {
-    // Skip pinned messages
     if (isPinnedMessage(message)) return;
 
-    // Check if the message already has a checkbox
-    if (message.closest(".chat-message-container")) return;
+    if (!message.closest(".chat-message-container")) {
+      const containerDiv = document.createElement("div");
+      containerDiv.className = "chat-message-container";
+      containerDiv.style.display = "flex";
 
-    // Create a new container div for checkbox and message
-    const containerDiv = document.createElement("div");
-    containerDiv.className = "chat-message-container"; // You can define a class for further CSS customization
-    containerDiv.style.display = "flex"; // Maintain a flex layout to align checkbox and message
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "message-checkbox";
+      checkbox.style.marginRight = "8px";
 
-    // Create a new checkbox element
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "message-checkbox";
-    checkbox.style.marginRight = "8px"; // Adjust spacing as needed
+      containerDiv.appendChild(checkbox);
+      message.parentNode.insertBefore(containerDiv, message);
+      containerDiv.appendChild(message);
 
-    // Insert the checkbox and the message into the new container div
-    message.parentNode.insertBefore(containerDiv, message); // Insert the container before the message
-    containerDiv.appendChild(checkbox); // Add checkbox to the container
-    containerDiv.appendChild(message); // Add the original message to the container
-
-    // Add an event listener to toggle the crossed-out style
-    checkbox.addEventListener("change", (e) => {
-      e.preventDefault();
-      handleCheckboxChange(e.target);
-    });
+      checkbox.addEventListener("change", (e) => {
+        e.preventDefault();
+        handleCheckboxChange(e.target);
+      });
+    }
   });
 }
 
@@ -46,21 +39,23 @@ function handleCheckboxChange(currentCheckbox) {
   const messages = Array.from(
     document.querySelectorAll("yt-live-chat-text-message-renderer")
   );
-  const currentMessage = currentCheckbox.nextElementSibling; // Changed to next sibling
+  const currentMessage = currentCheckbox
+    .closest(".chat-message-container")
+    .querySelector("yt-live-chat-text-message-renderer");
   const currentIndex = messages.indexOf(currentMessage);
 
   if (currentCheckbox.checked) {
-    // Hide report and feedback options
     hideReportFeedbackOptions();
 
-    // Check all previous messages and cross them out
     messages.forEach((msg, i) => {
       if (i < currentIndex && !isPinnedMessage(msg)) {
-        const prevCheckbox = msg.previousElementSibling; // Get the checkbox before the message
-        if (prevCheckbox && prevCheckbox.checked === false) {
+        const prevCheckbox = msg
+          .closest(".chat-message-container")
+          .querySelector(".message-checkbox");
+        if (prevCheckbox && !prevCheckbox.checked) {
           prevCheckbox.checked = true;
           styleMessage(msg, "line-through");
-          hideReportFeedbackOptions(msg); // Hide options for previous messages
+          hideReportFeedbackOptions();
         }
       }
     });
@@ -68,11 +63,12 @@ function handleCheckboxChange(currentCheckbox) {
   } else {
     hideReportFeedbackOptions();
 
-    // Uncheck all messages below the current message and remove cross-out
     messages.forEach((msg, i) => {
       if (i > currentIndex && !isPinnedMessage(msg)) {
-        const nextCheckbox = msg.previousElementSibling; // Get the checkbox before the message
-        if (nextCheckbox && nextCheckbox.checked === true) {
+        const nextCheckbox = msg
+          .closest(".chat-message-container")
+          .querySelector(".message-checkbox");
+        if (nextCheckbox && nextCheckbox.checked) {
           nextCheckbox.checked = false;
           styleMessage(msg, "none");
         }
@@ -84,15 +80,38 @@ function handleCheckboxChange(currentCheckbox) {
 
 // Function to style a message
 function styleMessage(message, textDecoration) {
-  message.style.textDecoration = textDecoration; // Set text decoration
-  message.style.color = textDecoration === "line-through" ? "#444" : ""; // Set text color
-  message.style.opacity = textDecoration === "line-through" ? "0.7" : ""; // Set opacity
-  message.style.backgroundColor =
-    textDecoration === "line-through" ? "#747070" : ""; // Set background color
+  message.style.textDecoration = textDecoration;
+  message.style.color = textDecoration === "line-through" ? "gray" : "";
+  message.style.opacity = textDecoration === "line-through" ? "0.7" : "";
+  message.style.textDecorationThickness = "2px";
+
   const userName = message.querySelector("#author-name");
   if (userName) {
-    userName.style.textDecoration = textDecoration; // Set text decoration for username
+    userName.style.textDecoration = textDecoration;
+    userName.style.color = textDecoration === "line-through" ? "gray" : "";
+    userName.style.textDecorationThickness = "2px";
   }
+
+  const images = message.querySelectorAll("img");
+  images.forEach((img) => {
+    if (textDecoration === "line-through") {
+      img.style.position = "relative";
+      const line = document.createElement("div");
+      line.style.position = "absolute";
+      line.style.top = "50%";
+      line.style.left = "0";
+      line.style.width = "100%";
+      line.style.height = "2px";
+      line.style.backgroundColor = "gray";
+      line.style.transform = "translateY(-50%)";
+      img.parentElement.style.position = "relative";
+      img.parentElement.appendChild(line);
+    } else {
+      const lines = img.parentElement.querySelectorAll("div");
+      lines.forEach((line) => line.remove());
+      img.style.position = "";
+    }
+  });
 }
 
 // Function to hide report and feedback options
@@ -104,8 +123,7 @@ function hideReportFeedbackOptions() {
 
 // Function to hide elements by tag or class name
 function hideElementByTag(tagName) {
-  const elements = document.querySelectorAll(tagName); // Get all elements by the tag or class name
-
+  const elements = document.querySelectorAll(tagName);
   elements.forEach((element) => {
     if (element.id !== "dropdown") {
       element.style.display = "none";
@@ -113,12 +131,12 @@ function hideElementByTag(tagName) {
   });
 }
 
-// Function to set up MutationObserver
+// Function to set up MutationObserver for monitoring changes
 function setupMutationObserver() {
   const chatContainer = document.querySelector(
     "yt-live-chat-item-list-renderer"
   );
-  if (!chatContainer) return; // Ensure the chat container exists
+  if (!chatContainer) return;
 
   const observer = new MutationObserver(() => {
     addCheckboxToMessages();
@@ -128,7 +146,7 @@ function setupMutationObserver() {
   observer.observe(chatContainer, { childList: true, subtree: true });
 }
 
-// Function to handle chat container changes
+// Function to observe changes in the live chat container
 function observeChatContainerChanges() {
   const liveChatContainer = document.querySelector("yt-live-chat-app");
   if (!liveChatContainer) return;
@@ -138,7 +156,7 @@ function observeChatContainerChanges() {
       "yt-live-chat-item-list-renderer"
     );
     if (chatContainer) {
-      setupMutationObserver(); // Set up observer for chat container
+      setupMutationObserver();
     }
   });
 
@@ -151,7 +169,6 @@ function removeSpecificElements() {
   hideElementByTag(".report-menu");
   hideElementByTag(".block-menu");
 
-  // Remove #menu elements inside yt-live-chat-text-message-renderer
   const chatMenuElements = document.querySelectorAll(
     "yt-live-chat-text-message-renderer #menu"
   );
@@ -164,5 +181,5 @@ function removeSpecificElements() {
 
 // Initial setup
 observeChatContainerChanges();
-addCheckboxToMessages(); // Initial call to add checkboxes to already loaded messages
-removeSpecificElements(); // Remove specific elements on initial load
+addCheckboxToMessages();
+removeSpecificElements();
