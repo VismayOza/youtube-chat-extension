@@ -15,7 +15,12 @@ function addCheckboxToMessages() {
     if (isPinnedMessage(message)) return;
 
     // Check if the message already has a checkbox
-    if (message.querySelector(".message-checkbox")) return;
+    if (message.closest(".chat-message-container")) return;
+
+    // Create a new container div for checkbox and message
+    const containerDiv = document.createElement("div");
+    containerDiv.className = "chat-message-container"; // You can define a class for further CSS customization
+    containerDiv.style.display = "flex"; // Maintain a flex layout to align checkbox and message
 
     // Create a new checkbox element
     const checkbox = document.createElement("input");
@@ -23,18 +28,16 @@ function addCheckboxToMessages() {
     checkbox.className = "message-checkbox";
     checkbox.style.marginRight = "8px"; // Adjust spacing as needed
 
-    // Find the user's name element
-    const userImageElement = message.querySelector("#author-photo");
-    if (userImageElement) {
-      // Insert the checkbox before the user's name
-      userImageElement.parentNode.insertBefore(checkbox, userImageElement);
+    // Insert the checkbox and the message into the new container div
+    message.parentNode.insertBefore(containerDiv, message); // Insert the container before the message
+    containerDiv.appendChild(checkbox); // Add checkbox to the container
+    containerDiv.appendChild(message); // Add the original message to the container
 
-      // Add an event listener to toggle the crossed-out style
-      checkbox.addEventListener("change", (e) => {
-        e.preventDefault();
-        handleCheckboxChange(e.target);
-      });
-    }
+    // Add an event listener to toggle the crossed-out style
+    checkbox.addEventListener("change", (e) => {
+      e.preventDefault();
+      handleCheckboxChange(e.target);
+    });
   });
 }
 
@@ -43,9 +46,7 @@ function handleCheckboxChange(currentCheckbox) {
   const messages = Array.from(
     document.querySelectorAll("yt-live-chat-text-message-renderer")
   );
-  const currentMessage = currentCheckbox.closest(
-    "yt-live-chat-text-message-renderer"
-  );
+  const currentMessage = currentCheckbox.nextElementSibling; // Changed to next sibling
   const currentIndex = messages.indexOf(currentMessage);
 
   if (currentCheckbox.checked) {
@@ -55,8 +56,8 @@ function handleCheckboxChange(currentCheckbox) {
     // Check all previous messages and cross them out
     messages.forEach((msg, i) => {
       if (i < currentIndex && !isPinnedMessage(msg)) {
-        const prevCheckbox = msg.querySelector(".message-checkbox");
-        if (prevCheckbox && !prevCheckbox.checked) {
+        const prevCheckbox = msg.previousElementSibling; // Get the checkbox before the message
+        if (prevCheckbox && prevCheckbox.checked === false) {
           prevCheckbox.checked = true;
           styleMessage(msg, "line-through");
           hideReportFeedbackOptions(msg); // Hide options for previous messages
@@ -70,8 +71,8 @@ function handleCheckboxChange(currentCheckbox) {
     // Uncheck all messages below the current message and remove cross-out
     messages.forEach((msg, i) => {
       if (i > currentIndex && !isPinnedMessage(msg)) {
-        const nextCheckbox = msg.querySelector(".message-checkbox");
-        if (nextCheckbox && nextCheckbox.checked) {
+        const nextCheckbox = msg.previousElementSibling; // Get the checkbox before the message
+        if (nextCheckbox && nextCheckbox.checked === true) {
           nextCheckbox.checked = false;
           styleMessage(msg, "none");
         }
