@@ -1,8 +1,6 @@
+// Function to check if a message is pinned
 function isPinnedMessage(message) {
-  if (message && message.hasAttribute("in-banner")) {
-    return true;
-  }
-  return false;
+  return message && message.hasAttribute("in-banner");
 }
 
 // Function to add a checkbox before each chat message
@@ -60,26 +58,12 @@ function handleCheckboxChange(currentCheckbox) {
         const prevCheckbox = msg.querySelector(".message-checkbox");
         if (prevCheckbox && !prevCheckbox.checked) {
           prevCheckbox.checked = true;
-          msg.style.textDecoration = "line-through"; // Cross out the message
-          msg.style.color = "#444"; // Make the text darker
-          msg.style.opacity = "0.7"; // Make the message slightly transparent
-          msg.style.backgroundColor = "#747070"; // Set a light background color to make it stand out
-          const userName = msg.querySelector("#author-name");
-          if (userName) {
-            userName.style.textDecoration = "line-through"; // Cross out the username
-          }
+          styleMessage(msg, "line-through");
           hideReportFeedbackOptions(msg); // Hide options for previous messages
         }
       }
     });
-    currentMessage.style.textDecoration = "line-through"; // Cross out the current message
-    currentMessage.style.color = "#444"; // Make the text darker
-    currentMessage.style.opacity = "0.7"; // Make the message slightly transparent
-    currentMessage.style.backgroundColor = "#747070"; // Set a light background color to make it stand out
-    const userName = currentMessage.querySelector("#author-name");
-    if (userName) {
-      userName.style.textDecoration = "line-through"; // Cross out the current username
-    }
+    styleMessage(currentMessage, "line-through");
   } else {
     hideReportFeedbackOptions();
 
@@ -89,40 +73,43 @@ function handleCheckboxChange(currentCheckbox) {
         const nextCheckbox = msg.querySelector(".message-checkbox");
         if (nextCheckbox && nextCheckbox.checked) {
           nextCheckbox.checked = false;
-          msg.style.textDecoration = "none"; // Remove cross-out from the message
-          msg.style.color = ""; // Restore the text color
-          msg.style.opacity = ""; // Restore the opacity
-          msg.style.backgroundColor = ""; // Restore the background color
-          const userName = msg.querySelector("#author-name");
-          if (userName) {
-            userName.style.textDecoration = "none"; // Remove cross-out from the username
-          }
+          styleMessage(msg, "none");
         }
       }
     });
-    currentMessage.style.textDecoration = "none"; // Remove cross-out from the current message
-    currentMessage.style.color = ""; // Restore the text color
-    currentMessage.style.opacity = ""; // Restore the opacity
-    currentMessage.style.backgroundColor = ""; // Restore the background color
-    const userName = currentMessage.querySelector("#author-name");
-    if (userName) {
-      userName.style.textDecoration = "none"; // Remove cross-out from the current username
-    }
+    styleMessage(currentMessage, "none");
   }
 }
 
-// Function to hide report and feedback options for a specific message
+// Function to style a message
+function styleMessage(message, textDecoration) {
+  message.style.textDecoration = textDecoration; // Set text decoration
+  message.style.color = textDecoration === "line-through" ? "#444" : ""; // Set text color
+  message.style.opacity = textDecoration === "line-through" ? "0.7" : ""; // Set opacity
+  message.style.backgroundColor =
+    textDecoration === "line-through" ? "#747070" : ""; // Set background color
+  const userName = message.querySelector("#author-name");
+  if (userName) {
+    userName.style.textDecoration = textDecoration; // Set text decoration for username
+  }
+}
+
+// Function to hide report and feedback options
 function hideReportFeedbackOptions() {
   hideElementByTag("tp-yt-iron-dropdown");
+  hideElementByTag(".report-menu");
+  hideElementByTag(".block-menu");
 }
 
+// Function to hide elements by tag or class name
 function hideElementByTag(tagName) {
-  const elements = document.getElementsByTagName(tagName); // Get all elements by the tag name
+  const elements = document.querySelectorAll(tagName); // Get all elements by the tag or class name
 
-  // Loop through each element and hide it
-  for (let i = 0; i < elements.length; i++) {
-    elements[i].style.display = "none";
-  }
+  elements.forEach((element) => {
+    if (element.id !== "dropdown") {
+      element.style.display = "none";
+    }
+  });
 }
 
 // Function to set up MutationObserver
@@ -134,13 +121,47 @@ function setupMutationObserver() {
 
   const observer = new MutationObserver(() => {
     addCheckboxToMessages();
+    removeSpecificElements();
   });
 
   observer.observe(chatContainer, { childList: true, subtree: true });
 }
 
-// Initial setup
-setupMutationObserver();
+// Function to handle chat container changes
+function observeChatContainerChanges() {
+  const liveChatContainer = document.querySelector("yt-live-chat-app");
+  if (!liveChatContainer) return;
 
-// Initial call to add checkboxes to already loaded messages
-addCheckboxToMessages();
+  const chatObserver = new MutationObserver(() => {
+    const chatContainer = document.querySelector(
+      "yt-live-chat-item-list-renderer"
+    );
+    if (chatContainer) {
+      setupMutationObserver(); // Set up observer for chat container
+    }
+  });
+
+  chatObserver.observe(liveChatContainer, { childList: true, subtree: true });
+}
+
+// Function to remove specific elements initially and during mutation
+function removeSpecificElements() {
+  hideElementByTag("tp-yt-iron-dropdown");
+  hideElementByTag(".report-menu");
+  hideElementByTag(".block-menu");
+
+  // Remove #menu elements inside yt-live-chat-text-message-renderer
+  const chatMenuElements = document.querySelectorAll(
+    "yt-live-chat-text-message-renderer #menu"
+  );
+  chatMenuElements.forEach((element) => {
+    if (element.parentNode) {
+      element.parentNode.removeChild(element);
+    }
+  });
+}
+
+// Initial setup
+observeChatContainerChanges();
+addCheckboxToMessages(); // Initial call to add checkboxes to already loaded messages
+removeSpecificElements(); // Remove specific elements on initial load

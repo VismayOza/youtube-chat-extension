@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Live Chat Checkbox",
+  "name": "Vismay's YouTube Live Chat Checkbox",
   "version": "1.0",
   "description": "Adds a checkbox before each YouTube live chat message.",
   "permissions": ["activeTab", "scripting"],
