@@ -50,7 +50,9 @@ function styleMessage(message, textDecoration) {
         line.style.height = "2px";
         line.style.backgroundColor = "gray";
         line.style.transform = "translateY(-50%)";
-        imgParent.style.position = "relative";
+        if (imgParent.id != "overlay-image") {
+          imgParent.style.position = "relative";
+        }
         imgParent.appendChild(line);
       }
     } else {
