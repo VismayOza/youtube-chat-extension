@@ -280,7 +280,7 @@ function addUncheckAllButton() {
   button.id = "uncheck-all-button";
   button.textContent = "Uncheck All";
   button.style.position = "fixed";
-  button.style.top = "40px";
+  button.style.top = "0.5%";
   button.style.right = "10px";
   button.style.padding = "10px 20px";
   button.style.backgroundColor = "#007bff";
