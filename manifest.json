@@ -10,5 +10,11 @@
       "js": ["content.js"],
       "run_at": "document_end"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/1603780019212.jpeg"],
+      "matches": ["*://www.youtube.com/*"]
+    }
   ]
 }

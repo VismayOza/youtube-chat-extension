@@ -1,3 +1,5 @@
+// Base Original Back Up without much additions.
+
 // Function to check if a message is pinned
 function isPinnedMessage(message) {
     return message && message.hasAttribute("in-banner");
