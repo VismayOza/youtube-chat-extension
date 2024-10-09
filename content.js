@@ -1,3 +1,10 @@
+let uniqueIdCounter = 1; // Initialize a counter for unique IDs
+
+// Function to generate a unique ID
+function generateUniqueId() {
+  return `message-${uniqueIdCounter++}`; // Increment the counter after generating the ID
+}
+
 // Function to check if a message is pinned
 function isPinnedMessage(message) {
   return message && message.hasAttribute("in-banner");
@@ -120,21 +127,18 @@ function applyStylesOnLoad(checkbox, message) {
   styleMessage(message, textDecoration);
 }
 
-// Function to add a checkbox before each chat message
+// Function to add a checkbox and number before each chat message
 function addCheckboxToMessages() {
   const messages = document.querySelectorAll(
     "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer, yt-live-chat-member-message-renderer"
   );
 
-  messages.forEach((message) => {
+  messages.forEach((message, index) => {
     // Skip pinned messages and messages inside the tp-yt-paper-dialog
     if (isPinnedMessage(message) || message.closest("tp-yt-paper-dialog"))
       return;
 
-    const messageId =
-      message.getAttribute("id") ||
-      message.getAttribute("data-message-id") ||
-      message.textContent.trim();
+    const messageId = generateUniqueId(); // Use the unique ID generator
     const uniqueId = `checkbox-${messageId}`;
 
     if (!message.closest(".chat-message-container")) {
@@ -142,6 +146,11 @@ function addCheckboxToMessages() {
       containerDiv.className = "chat-message-container";
       containerDiv.style.display = "flex";
       containerDiv.style.position = "relative";
+
+      const numberSpan = document.createElement("span");
+      numberSpan.textContent = `${index + 1}. `;
+      numberSpan.style.fontWeight = "bold";
+      numberSpan.style.marginRight = "8px";
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -155,6 +164,7 @@ function addCheckboxToMessages() {
       label.style.cursor = "pointer";
       label.style.display = "inline-block";
 
+      containerDiv.appendChild(numberSpan); // Add number before checkbox
       containerDiv.appendChild(checkbox);
       message.parentNode.insertBefore(containerDiv, message);
       containerDiv.appendChild(label);
@@ -343,17 +353,89 @@ function addUncheckAllButton() {
   document.body.appendChild(button);
 }
 
+// Function to initialize voice recognition
+function initializeVoiceRecognition() {
+  if (!("webkitSpeechRecognition" in window)) {
+    console.log("Speech recognition not supported.");
+    return;
+  }
+
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = "en-US"; // Set the language to English
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = function (event) {
+    const transcript = event.results[0][0].transcript;
+    handleVoiceCommand(transcript);
+  };
+
+  recognition.onerror = function (event) {
+    console.error("Speech recognition error:", event.error);
+  };
+
+  recognition.onend = function () {
+    console.log("Speech recognition ended.");
+    // Restart recognition after ending
+    recognition.start();
+  };
+
+  recognition.start();
+}
+
+// Function to handle the voice command
+function handleVoiceCommand(transcript) {
+  console.log("Voice command received:", transcript);
+
+  // Check if the transcript is a number
+  const messageNumber = parseInt(transcript, 10);
+  if (!isNaN(messageNumber)) {
+    const messages = Array.from(
+      document.querySelectorAll(
+        "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer, yt-live-chat-member-message-renderer"
+      )
+    );
+
+    const targetMessage = messages[messageNumber - 1]; // Get message by number
+
+    if (targetMessage) {
+      const checkbox = targetMessage
+        .closest(".chat-message-container")
+        ?.querySelector(".message-checkbox");
+      if (checkbox) {
+        checkbox.checked = true;
+        styleMessage(targetMessage, "line-through");
+        saveCheckboxState();
+        checkPreviousMessages(messages.slice(0, messageNumber - 1)); // Check all previous messages up to the matched message
+      }
+    }
+  }
+}
+
+// Function to check all previous messages up to the matched message
+function checkPreviousMessages(previousMessages) {
+  previousMessages.forEach((message) => {
+    const checkbox = message
+      .closest(".chat-message-container")
+      ?.querySelector(".message-checkbox");
+    if (checkbox && !checkbox.checked) {
+      checkbox.checked = true;
+      styleMessage(message, "line-through");
+    }
+  });
+  saveCheckboxState();
+}
+
 // Function to initialize everything
 function initialize() {
   addCheckboxToMessages();
   observeChatContainerChanges();
   addUncheckAllButton(); // Add the button initially
+  initializeVoiceRecognition(); // Initialize voice recognition
 }
 
 // Run the initialization
 initialize();
-
-// Trying Voice Recoginition
 
 // Function to check if a message is pinned
 // function isPinnedMessage(message) {
@@ -702,27 +784,27 @@ initialize();
 
 // // Function to initialize voice recognition
 // function initializeVoiceRecognition() {
-//   if (!('webkitSpeechRecognition' in window)) {
+//   if (!("webkitSpeechRecognition" in window)) {
 //     console.log("Speech recognition not supported.");
 //     return;
 //   }
 
 //   const recognition = new webkitSpeechRecognition();
-//   recognition.lang = 'en-US'; // Set the language to English
+//   recognition.lang = "en-US"; // Set the language to English
 //   recognition.interimResults = false;
 //   recognition.maxAlternatives = 1;
 
-//   recognition.onresult = function(event) {
+//   recognition.onresult = function (event) {
 //     const transcript = event.results[0][0].transcript;
 //     handleVoiceCommand(transcript);
 //   };
 
-//   recognition.onerror = function(event) {
-//     console.error('Speech recognition error:', event.error);
+//   recognition.onerror = function (event) {
+//     console.error("Speech recognition error:", event.error);
 //   };
 
-//   recognition.onend = function() {
-//     console.log('Speech recognition ended.');
+//   recognition.onend = function () {
+//     console.log("Speech recognition ended.");
 //     // Restart recognition after ending
 //     recognition.start();
 //   };
@@ -730,35 +812,100 @@ initialize();
 //   recognition.start();
 // }
 
-// // Function to handle the voice command
-// function handleVoiceCommand(transcript) {
-//   console.log('Voice command received:', transcript);
+// // List of common stop words (you can add more to this list)
+// const stopWords = [
+//   "the",
+//   "is",
+//   "in",
+//   "and",
+//   "of",
+//   "to",
+//   "a",
+//   "it",
+//   "on",
+//   "with",
+//   "as",
+//   "for",
+// ];
 
-//   // Search for the message matching the transcript
-//   const messages = document.querySelectorAll(
-//     "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer, yt-live-chat-member-message-renderer"
+// // Function to normalize punctuation, tokenize and remove stop words
+// function tokenizeAndRemoveStopWords(text) {
+//   return text
+//     .toLowerCase()
+//     .replace(/[!?.]/g, ".") // Normalize exclamation marks, full stops, and question marks to a common symbol (.)
+//     .replace(/[^\w\s.]/gi, "") // Remove other punctuation
+//     .split(" ") // Tokenize by splitting on space
+//     .filter((word) => word && !stopWords.includes(word)); // Filter out stop words
+// }
+
+// // Cosine Similarity function
+// function cosineSimilarity(vec1, vec2) {
+//   const dotProduct = vec1.reduce(
+//     (sum, val, index) => sum + val * vec2[index],
+//     0
+//   );
+//   const magnitude1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
+//   const magnitude2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
+//   return dotProduct / (magnitude1 * magnitude2);
+// }
+
+// // Create word vector for cosine similarity
+// function createWordVector(words, allWords) {
+//   return allWords.map((word) => (words.includes(word) ? 1 : 0));
+// }
+
+// // Function to calculate similarity using Cosine Similarity
+// function getSimilarityCosine(s1, s2) {
+//   const words1 = tokenizeAndRemoveStopWords(s1);
+//   const words2 = tokenizeAndRemoveStopWords(s2);
+
+//   const allWords = Array.from(new Set([...words1, ...words2])); // Unique words in both texts
+
+//   const vector1 = createWordVector(words1, allWords);
+//   const vector2 = createWordVector(words2, allWords);
+
+//   return cosineSimilarity(vector1, vector2);
+// }
+
+// function handleVoiceCommand(transcript) {
+//   console.log("Voice command received:", transcript);
+
+//   const messages = Array.from(
+//     document.querySelectorAll(
+//       "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer, yt-live-chat-member-message-renderer"
+//     )
 //   );
 
-//   messages.forEach((message) => {
+//   let targetMessageFound = false; // Flag to indicate if the target message has been found
+
+//   messages.forEach((message, index) => {
 //     const messageText = message.querySelector("#message")?.textContent.trim();
-//     if (messageText && messageText.toLowerCase() === transcript.toLowerCase()) {
-//       const checkbox = message.closest(".chat-message-container")?.querySelector(".message-checkbox");
-//       if (checkbox) {
-//         checkbox.checked = true;
-//         styleMessage(message, "line-through");
-//         saveCheckboxState();
+
+//     if (!targetMessageFound && messageText) {
+//       // Check if the similarity is 80% or higher using Cosine similarity
+//       const similarity = getSimilarityCosine(transcript, messageText);
+//       if (similarity >= 0.8) {
+//         const checkbox = message
+//           .closest(".chat-message-container")
+//           ?.querySelector(".message-checkbox");
+//         if (checkbox) {
+//           checkbox.checked = true;
+//           styleMessage(message, "line-through");
+//           saveCheckboxState();
+//           targetMessageFound = true; // Mark the target message as found
+//           checkPreviousMessages(messages.slice(0, index)); // Check all previous messages up to the matched message
+//         }
 //       }
 //     }
 //   });
-
-//   // Optionally, check all previous messages if needed
-//   checkPreviousMessages(messages);
 // }
 
-// // Function to check all previous messages
-// function checkPreviousMessages(messages) {
-//   messages.forEach((message) => {
-//     const checkbox = message.closest(".chat-message-container")?.querySelector(".message-checkbox");
+// // Function to check all previous messages up to the matched message
+// function checkPreviousMessages(previousMessages) {
+//   previousMessages.forEach((message) => {
+//     const checkbox = message
+//       .closest(".chat-message-container")
+//       ?.querySelector(".message-checkbox");
 //     if (checkbox && !checkbox.checked) {
 //       checkbox.checked = true;
 //       styleMessage(message, "line-through");
